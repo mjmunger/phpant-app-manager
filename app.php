@@ -1,0 +1,778 @@
+<?php
+namespace PHPAnt\Core;
+
+/**
+ * App Name: +Core App Manager
+ * App Description: Provides App management from the CLI to bootstrap your application.
+ * App Version: 1.0
+ * App Action: cli-load-grammar -> loadAppManager @ 90
+ * App Action: cli-init         -> declareMySelf  @ 50
+ * App Action: cli-command      -> processCommand @ 50
+ */
+
+ /**
+ * This App allows you to list, enable, and disable Apps from the CLI
+ * in order to boostrap or debug your software.
+ *
+ * @package      PHPAnt
+ * @subpackage   Apps
+ * @category     Bootstrap manager
+ * @author       Michael Munger <michael@highpoweredhelp.com>
+ */ 
+class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterface  {
+
+    /**
+     * Instantiates an instance of the PluginManager class.
+     * Example:
+     *
+     * <code>
+     * $appAppManager = new PluginManager();
+     * </code>
+     *
+     * @return void
+     * @author Michael Munger <michael@highpoweredhelp.com>
+     **/
+
+    function __construct() {
+        $this->appName = 'App Manager';
+        $this->canReload = false;
+        $this->path = __DIR__;
+    }
+
+    function getActionList($Engine) {
+        $actionList = array();
+
+        foreach($Engine->apps as $app) {
+            foreach($app->hooks as $hook) {
+                if(!in_array($hook['hook'], $actionList)) $actionList[$hook['hook']] = NULL;
+            }
+        }
+
+        //Sort the list so we can display it nicely.
+        ksort($actionList);        
+
+        return $actionList;        
+    }    
+
+    /**
+     * Callback for the cli-load-grammar action, which adds commands specific to this plugin to the CLI grammar.
+     * Example:
+     *
+     * <code>
+     * $appAppManager->addHook('cli-load-grammar','loadAppManager');
+     * </code>
+     *
+     * @return array An array of CLI grammar that will be merged with the rest of the grammar. 
+     * @author Michael Munger <michael@highpoweredhelp.com>
+     **/
+
+    function loadAppManager($args) {
+        $AE = $args['AE'];
+        
+        $appList = array();
+
+        foreach($AE->availableApps as $name => $path) {
+            $appList[$name] = NULL;
+        }
+
+        $actionList = $this->getActionList($AE);
+
+        /* Add "all" as an option for the plugin list. */
+
+        $appList['all'] = NULL;
+
+        $grammar['apps'] = [ 'blacklist' => [ 'clear'   => NULL
+                                            , 'disable' => NULL
+                                            , 'enable'  => NULL
+                                            , 'show'    => NULL
+                                            , 'unban'   => NULL
+                                            ]
+                           , 'disable'   => $appList
+                           , 'enable'    => $appList
+                           , 'key'       => [ 'generate' => NULL
+                                            , 'remove'   => NULL
+                                            , 'set'      => NULL
+                                            , 'show'     => NULL
+                                            ]
+                           , 'list'      => [ 'available' => NULL
+                                            , 'enabled'   => NULL
+                                            ]
+                           , 'manifest'  => ['generate' => $appList]
+                           , 'new'       => NULL
+                           , 'publish'   => $appList
+                           , 'reload'    => NULL
+                           , 'sign'      => NULL
+                           , 'snapshot'  => [ 'restore' => NULL
+                                            , 'save'    => NULL
+                                            ]
+                            ,'verify'    => $appList
+                           ];
+
+        $grammar['libs']    = ['git' => NULL];
+
+        $grammar['actions'] = ['show' => [ 'all'        => NULL 
+                                         , 'priorities' => $actionList
+                                         ]
+                              ];
+        
+        $results['grammar'] = $grammar;
+        $results['success'] = true;
+        return $results;
+    }
+    
+    /**
+     * Callback function that prints to the CLI during cli-init to show this plugin has loaded.
+     * Example:
+     *
+     * <code>
+     * $appAppManager->addHook('cli-init','declareMySelf');
+     * </code>
+     *
+     * @return array An associative array declaring the status / success of the operation.
+     * @author Michael Munger <michael@highpoweredhelp.com>
+     **/
+
+    function declareMySelf() {
+        if($this->verbosity > 4 && $this->loaded ){
+            print("Default Grammar Plugin loaded.\n");
+        }
+        return array('success' => true);
+    }
+
+    function listapps(AppEngine $AE, $which = 'all') {
+        $listingArray = NULL;
+
+        print PHP_EOL;
+        switch ($which) {
+            case 'available':
+                $listingArray = array_diff($AE->availableApps,$AE->enabledApps);
+                print "Available apps" . PHP_EOL;
+                break;
+            
+            case 'enabled':
+                print "Enabled apps" . PHP_EOL;
+                $listingArray = $AE->enabledApps;
+                break;
+
+            case 'all':
+                print "All apps" . PHP_EOL;
+                $listingArray = $AE->availableApps;
+                break;
+
+            default:
+                print "List what? apps list [available | enabled]" . PHP_EOL . PHP_EOL;
+                return ['success' => true];
+                break;
+        }
+
+        $TL = new TableLog();
+        $TL->setHeader(['App','Path']);
+
+        foreach($listingArray as $app => $path) {
+            $TL->addRow([$app,$path]);
+        }
+
+        $TL->showTable();
+
+        return ['success' => true];
+    }
+
+    function disableApp($args) {
+        $AE      = $args['AE'];
+        $command = $args['command'];
+        $appName = $command->leftStrip('apps disable',true);
+        if(!array_key_exists($appName, $AE->availableApps)) {
+            echo "$appName could not be found in the list of available apps." . PHP_EOL;
+            return ['success' => false];
+        }
+
+        $result = $AE->disableApp($appName,$AE->availableApps[$appName]);
+
+        echo ($result?"$appName successfully disabled.":"$appName could not be enabled.");
+        echo PHP_EOL;
+        return ['success' => $result];
+    }
+
+    function enableApp($args) {
+        $AE      = $args['AE'];
+        $command = $args['command'];
+        $appName = $command->leftStrip('apps enable',true);
+        if(!array_key_exists($appName, $AE->availableApps)) {
+            echo "$appName could not be found in the list of available apps." . PHP_EOL;
+            return ['success' => false];
+        }
+
+        $result = $AE->enableApp($appName,$AE->availableApps[$appName]);
+
+        return $result;
+    }
+
+    private function UCArrayWord($word) {
+        return ucwords($word);
+    }
+
+    function gitLibraries($args) {
+        $cmd = $args['command'];
+        $AE  = $args['PE'];
+
+        chdir($AE->Configs->getLibsDir());
+        $cmd = "git clone " . $cmd->getLastToken();
+        $result = exec($cmd);
+        echo $result . PHP_EOL;
+        printf("Done" . PHP_EOL);
+    }
+
+    function showPriorities($AE,$cmd) {
+        $action = $cmd->getLastToken();
+
+        $appsWithRequestedHook = $AE->getappsWithRequestedHook($action);
+        print PHP_EOL;
+        printf("For hook: %s, plugin firing order is:" . PHP_EOL, $action);
+        print str_pad("Name", 50);
+        print str_pad("Priority", 50);
+        print PHP_EOL;
+
+        foreach($appsWithRequestedHook as $plugin) {
+
+            $hash = $AE->getHookKey($plugin,$action);
+
+            print str_pad($plugin->appName, 50);
+            print str_pad($plugin->hooks[$hash]['priority'], 50);
+            print PHP_EOL;                
+        }
+    }
+
+    function showAllActions($AE) {
+        print "Actions that have been registered in this application:" . PHP_EOL;
+        $actionList = $this->getActionList($AE);
+        foreach($actionList as $action => $buffer) {
+            print $action . PHP_EOL;
+        }
+    }
+
+    function generateAppManifest($args) {
+        $cmd = $args['command'];
+        $AE  = $args['AE'];
+
+        $appName = $cmd->leftStrip('apps manifest generate',true);
+
+        //Get the app dir, because that's what PHPAntSigner needs.
+        $path = dirname($AE->availableApps[$appName]);
+        $buffer = explode('/', $path);
+        $appDir = end($buffer);
+
+        $options['AE'] = $AE;
+        $Signer  = new PHPAntSigner($options);
+        $Signer->setApp($appDir);
+        $manifestPath = $Signer->generateManifestFile();
+
+        return ['success' => file_exists($manifestPath)];
+    }
+
+    function determineAppNameOnDisk(AppEngine $AE, $requestedApp, $mode) {
+        switch ($mode) {
+            case 'byName':
+                if(!isset($AE->availableApps[$requestedApp])) {
+                    print "The requested app ($requestedApp) is not available. Remember: app names are CaSe SeNsiTivE" . PHP_EOL;
+                    return ['success' => false];
+                }
+                $buffer = explode('/',dirname($AE->availableApps[$requestedApp]));
+                $appFolder = end($buffer);
+                return $appFolder;
+                break;
+            case 'byPath':
+                $buffer = explode('/',dirname($requestedApp));
+                $appFolder = end($buffer);
+                return $appFolder;
+                break;            
+            default:
+                // code...
+                break;
+        }
+    }
+
+    function verifySingleApp(AppEngine $AE,$requestedApp,$mode) {
+
+        $appFolder = $this->determineAppNameOnDisk($AE, $requestedApp, $mode);
+
+        $options['AE'] = $AE;
+        $Signer = new \PHPAnt\Core\PHPAntSigner($options);
+        try {
+            $Signer->setApp($appFolder);
+        } catch (Exception $e) {
+            print "Seems you just tried to set an app that doesn't exist?" . PHP_EOL;
+        }
+        return $Signer->verifyApp();
+    }
+
+    function createNewApp($AE,$cmd) {
+
+        $privateKey = $AE->Configs->getConfigs(['signing-key']);
+        if(!$privateKey) {
+
+            print "You do not have a signing key, and therefore cannot create" . PHP_EOL;
+            print "a new app. Either generate a new key with `apps key generate`, or" . PHP_EOL;
+            print "use settings set signing-key [/path/to/private.key] to setup your" . PHP_EOL;
+            print "key." . PHP_EOL;
+            print PHP_EOL;
+
+            return ['success' => false];
+        }
+
+        //Copy the template app to this directory.
+        $templatePath = __DIR__ . '/resources/app-template.php';
+        $template     = file_get_contents($templatePath);
+
+        $autoloaderTemplatePath = __DIR__ . '/resources/auto-loader-template.php';
+        $autoloaderTemplate     = file_get_contents($autoloaderTemplatePath);
+
+        //We are only supporting git for now.
+        printf("Enter the git URL for this project:\n");
+        
+        //this really needs to be sanitized, but if you're an admin and you
+        //want to inject malcious code here, go for it. You're only destroying
+        //your own system. We are not going to try to protect you from
+        //yourself.
+
+        $gitURL = trim(fgets(STDIN));
+
+        //If we use an autoloader, that will be included later.
+        printf("Will this project use an autoloader? [Y/n]\n");
+        $choice = trim(fgets(STDIN));
+
+        $autoloader = ($choice == "" || $choice = "Y");
+        printf("Use autoloader: %s\n",($autoloader?"Yes":"No"));
+
+        //Parse the project name from the URL
+        $buffer = explode('/', $gitURL);
+        $buffer = end($buffer);
+        $buffer = explode('.', $buffer);
+
+        $gitProjectName = $buffer[0];
+
+        printf("Creating app directory: %s\n",$gitProjectName);
+
+        //change to the apps directory.
+        chdir($AE->Configs->getAppsDir());
+        $command = sprintf('git clone %s',$gitURL);
+        passthru($command);
+
+        $appDir = $AE->Configs->getAppsDir() . $gitProjectName;
+
+        chdir($appsDir);
+
+        //Add in the autoloader FIRST before we do a find / replace on the other template fields so they will be included!
+
+        $autoloaderTemplate = ($autoloader ? $autoloaderTemplate: NULL);
+        $template = str_replace('%AUTOLOADER%',$autoloaderTemplate, $template);
+
+        //Replace all the placeholders with the info we need.
+
+        $questions = [ "What's the project namespace?"                                              => '%PROJECT%'
+                     , "What's the subspace for this app?"                                          => '%SUBSPACE%'
+                     , "What's the category of this app?"                                           => '%CATEGORY%'
+                     , "What's the app's name? (Friendly name. Spaces allowed.)"                    => '%FRIENDLYNAME%'
+                     , "What's this app's system name? (Usually, the friendly name without spaces)" => '%SYSTEMNAME%'
+                     , "Please give a short description of this app."                               => '%APPDESCRIPTION%'
+                     , "What's your name? (For authorship details)"                                 => '%AUTHORNAME%'
+                     , "What's your email address? (For authorship details)"                        => '%AUTHOREMAIL%'
+                     ];
+
+        foreach($questions as $q => $field) {
+            printf("%s\n",$q);
+            $answer   = trim(fgets(STDIN));
+            $template = str_replace($field, $answer, $template);
+
+            //Save these to setup git later.
+            if($field == '%AUTHORNAME%')  $authorname  = $answer;
+            if($field == '%AUTHOREMAIL%') $authoreamil = $answer;
+        }
+
+        $fh = fopen($appDir . '/app.php','w');
+        fwrite($fh,$template);
+        fclose($fh);
+
+        $request = ['signing-key'];
+        $settings = $AE->Configs->getConfigs($request);
+
+        //Next, let's publish the app.
+        $options['AE']             = $AE;
+        $options['privateKeyPath'] = $settings['signing-key'];
+        $options['appName']        = $gitProjectName;
+
+        $Signer  = new PHPAntSigner($options);
+        $results = $Signer->publish($options);
+
+        $TL = new TableLog();
+        $TL->setHeader(["Task","Result"]);
+        foreach($results as $key => $value) {
+            switch($key) {
+                case 'appActions':
+                    $key = 'Action List for this App (JSON)';
+                    break;
+
+                case 'cleanAppCredentials':
+                    $key = 'App Credentials Cleaned';
+                    break;
+
+                case 'generateManifestFile':
+                    $key = 'Generate Manifest File';
+                    break;
+
+                case 'saveDerivePublicKey':
+                    $key = 'Derived Public Key';
+                    break;
+
+                case 'setApp':
+                    $key = 'Setting Application for Signing';
+                    break;
+
+                case 'signApp':
+                    $key = 'Signing App';
+                    break;
+
+                case 'verifyApp':
+                    $key = 'Verifying Signature';
+                    $value = $value['integrityOK'];
+                    break;
+
+            }
+
+            if(is_bool($value)) $value = ($value?"OK":"FAILED");
+
+            $TL->addRow([$key,$value]);
+        }
+
+        $TL->showTable();        
+
+        //Now, let's tell git about it.
+        chdir($appDir);
+        mkdir('tests');
+
+        //Create the readme so that this will get included in the git folder.
+        $fh = fopen($appDir . '/tests/readme.md','w');
+        fwrite($fh,'Unit tests go in this directory');
+        fclose($fh);
+
+        if($autoloader) {
+            mkdir('classes');
+            $fh = fopen($appDir . '/classes/readme.md','w');
+            fwrite($fh,'Autoloaded classes go in this directory');
+            fclose($fh);            
+        }
+
+        $commands = [ sprintf('git config user.email %s',$authoreamil)
+                    , sprintf('git config user.name "%s"',$authorname)
+                    , 'git add *'
+                    , 'git commit -m "Initial commit. Added signed base app.php"'
+                    , 'git push'
+                    ];
+
+        foreach($commands as $command) {
+            passthru($command);
+        }
+        
+        echo "App skeleton created, committed to git, and pushed to the repo. Remember to";
+        echo PHP_EOL;
+        echo "regenerate your manifest file when you add new hooks, and to re-sign your app";
+        echo PHP_EOL;
+        echo "once you've got it ready for distribution.";
+        echo PHP_EOL;
+    }
+
+    function generatenewKeys($args) {
+        $Signer = new \PHPAnt\Core\PHPAntSigner($args);
+        $Signer->genKeys(true);
+    }
+    function processCommand($args) {
+        $cmd = $args['command'];
+        $AE  = $args['AE'];
+
+        /* deal with actions */
+
+        if($cmd->is('apps new')) $this->createNewApp($AE,$cmd);
+
+        if($cmd->startswith('actions show priorities')) {
+            $this->showPriorities($AE,$cmd);
+        }
+
+        if($cmd->is('actions show all')) {
+            $this->showAllActions($AE,$cmd);
+        }        
+
+        /* git for libraries */
+
+        if($cmd->startswith('libs git')) {
+            $this->gitLibraries($args);
+        }
+
+        if($cmd->startswith('apps blacklist')) {
+            switch ($cmd->getToken(2)) {
+
+                case 'disable':
+                    $AE->AppBlacklist->disabled = true;
+                    $AE->Configs->setConfig('BlacklistDisabled',"1");
+                    $success = true;
+                    $message = "Blacklist disabled." . PHP_EOL;
+                    break;
+                case 'enable':
+                    $AE->AppBlacklist->disabled = false;
+                    $AE->Configs->setConfig('BlacklistDisabled',"0");
+                    $success = true;
+                    $message = "Blacklist enabled." . PHP_EOL;
+                    break;                    
+                case 'clear':
+                    $AE->AppBlacklist->clear();
+                    $message = "Blacklist cleared." . PHP_EOL;
+                    $success = true;
+                    break;
+
+                case 'show':
+                    $message = '';
+                    $counter = 0;
+                    $TL = new TableLog();
+                    $TL->setHeader(['#','Name','Path']);
+                    foreach($AE->AppBlacklist->blacklist as $path) {
+                        $TL->addRow([$counter,$AE->getAppMeta($path,'name'),$path]);
+                    }
+                    $message = $TL->makeTable();
+                    $success = true;
+                    break;
+
+                case 'unban':
+                    $item = $cmd->getLastToken();
+
+                    if($item >= count($item)) {
+                        $message = "Item not found. Use apps blacklist show to see the currently blacklisted apps," . PHP_EOL . "then use the number listed next to the app you want to unban." . PHP_EOL;
+                        $success = false;
+                        break;
+                    }
+
+                    $appName = $AE->getAppMeta($AE->AppBlacklist->blacklist[$item],'name');
+                    $AE->AppBlacklist->unban($item);
+                    $message = "%s removed from blacklist. If this app is still malfunctioning, it will be re-added nearly instantly." . PHP_EOL;
+                    $message = sprintf($message,$appName);
+                    $success = true;
+                    break;
+
+                default:
+                    // code...
+                    break;
+            }
+
+            printf($message);
+            $return = [];
+            $return['success'] = $success;
+            $return['message'] = $message;
+            return $return;
+        }
+
+        if($cmd->startswith('apps key')) {
+            switch ($cmd->getToken(2)) {
+                case 'generate':
+                    $this->generateNewKeys($args);
+                    break;
+                case 'remove':
+                    $result = $args['AE']->Configs->setConfig('signing-key','');
+                    print "Signing key removed." . PHP_EOL;
+                    break;
+                case 'set':
+                    $path = $cmd->getLastToken();
+                    if(!file_exists($path)) {
+                        print "The file $path does not exist. Key not set!" . PHP_EOL;
+                        return ['success' => false];
+                    }
+                    
+                    $result = $args['AE']->Configs->setConfig('signing-key',$path);
+                    $keyPath = $args['AE']->Configs->getConfigs(['signing-key']);
+                    print "Signing key set to: " . $keyPath['signing-key'] . PHP_EOL;
+                    return ['success' => $result];
+                    break;
+                case 'show':
+                    $keyPath = $args['AE']->Configs->getConfigs(['signing-key']);
+                    print "Signing key set to: " . $keyPath['signing-key'] . PHP_EOL;
+                    break;
+                default:
+                    print           "Command not understood.";
+                    print PHP_EOL . "Try:";
+                    print PHP_EOL . "apps key set /path/to/private.key";
+                    print PHP_EOL . "or";
+                    print PHP_EOL . "apps key remove";
+                    print PHP_EOL;
+                    break;
+            }
+        }
+
+        /* Save enabled apps so that we know what the known-good state of the application is */
+
+        if($cmd->is('apps snapshot save')) {
+            $buffer = $AE->Configs->getConfigs(['enabledAppsList']);
+            if($AE->Configs->setConfig('enabledAppsListSnapshot',$buffer['enabledAppsList'])) {
+                print "Enabled apps list snapshot saved." . PHP_EOL;
+            } else {
+                print "I could not snapshot the enabled apps list. " . PHP_EOL;
+            }
+            return ['success' => true];
+        }
+
+        if($cmd->is('apps snapshot restore')) {
+            $buffer = $AE->Configs->getConfigs(['enabledAppsListSnapshot']);
+            if($AE->Configs->setConfig('enabledAppsList',$buffer['enabledAppsListSnapshot'])) {
+                $AE->getenabledApps();
+                print "Enabled apps list snapshot restored. Reload apps to activate." . PHP_EOL;
+            } else {
+                print "I could not restore the enabled apps list. " . PHP_EOL;
+            }
+            return ['success' => true];
+        }
+
+        /* list apps */ 
+        if($cmd->startswith('apps list')) {
+            $which = $cmd->getLastToken();
+            $this->listapps($AE,$which);
+        }
+
+        if($cmd->startswith('apps enable')) {
+            $result = $this->enableApp($args);
+            if(isset($result['message'])) {
+                echo $result['message'] . PHP_EOL;
+                $args['AE']->log("AppEngine",$result['message']);
+            }
+
+        }
+
+        if($cmd->startswith('apps disable')) {
+            $this->disableApp($args);
+        }
+
+        if($cmd->is('apps reload')) {
+            $AE->reload();
+            echo "Reload complete." . PHP_EOL;
+            return ['success' => true,'cli-command' => 'reload-grammar'];
+        }
+
+        if($cmd->startswith('apps manifest generate')) {
+            $return = $this->generateAppManifest($args);
+            return $return;
+        }
+
+        if($cmd->startswith('apps verify')) {
+            $requestedApp = $cmd->leftStrip('apps verify', true);
+
+            if($requestedApp == 'all') {
+                $appStatus = [];
+                foreach($AE->availableApps as $app) {
+                    $results = $this->verifySingleApp($AE,$app,'byPath');
+                    $appStatus[$app] = ($results['integrityOK']?"OK":"FAILED");
+                }
+                $TL = New TableLog();
+                $TL->setHeader(['App','Integrity Status']);
+                foreach($appStatus as $app => $status) {
+                    $TL->addRow([$app,$status]);
+                }
+                $TL->showTable();
+
+            } else {
+                $result = $this->verifySingleApp($AE,$requestedApp, 'byName');
+                
+                if($result['integrityOK']) {
+                    print "App integrity OK." . PHP_EOL;
+                } else {
+                    print "APP INTEGRITY CANNOT BE VERIFIED." . PHP_EOL;
+                    $TL = new TableLog();
+                    $TL->setHeader(['File','Status']);
+                    foreach($result as $file => $status) {
+                        if($file == 'integrityOK') continue;
+                        $TL->addRow([$file,$status]);
+                    }
+                    $TL->showTable();
+                }
+            }
+
+        }
+
+        if($cmd->startswith('apps publish')) {
+            $privateKey = $args['AE']->Configs->getConfigs(['signing-key'])['signing-key'];
+
+            if(!file_exists($privateKey)) {
+                print "Private key ($privateKey) is missing or inaccessible. Cannot sign app." . PHP_EOL;
+                return ['success' => false];
+            }
+
+            //Figure out the on-disk app name
+            $requestedApp = $cmd->leftStrip('apps publish', true);
+
+            $buffer = explode('/',dirname($AE->availableApps[$requestedApp]));
+            $appFolder = end($buffer);
+
+            $args['privateKeyPath'] = $privateKey;
+            $args['appName']        = $appFolder;
+
+            $options['AE'] = $args['AE'];
+
+            $Signer = new \PHPAnt\Core\PHPAntSigner($options);
+            $Signer->setApp($appFolder);
+            $results = $Signer->publish($args);
+            
+            $TL = new TableLog();
+            $TL->setHeader(["Task","Result"]);
+            foreach($results as $key => $value) {
+                switch($key) {
+                    case 'appActions':
+                        $key = 'Action List for this App (JSON)';
+                        break;
+
+                    case 'cleanAppCredentials':
+                        $key = 'App Credentials Cleaned';
+                        break;
+
+                    case 'generateManifestFile':
+                        $key = 'Generate Manifest File';
+                        break;
+
+                    case 'saveDerivePublicKey':
+                        $key = 'Derived Public Key';
+                        break;
+
+                    case 'setApp':
+                        $key = 'Setting Application for Signing';
+                        break;
+
+                    case 'signApp':
+                        $key = 'Signing App';
+                        break;
+
+                    case 'verifyApp':
+                        $key = 'Verifying Signature';
+                        $value = $value['integrityOK'];
+                        break;
+
+                }
+
+                if(is_bool($value)) $value = ($value?"OK":"FAILED");
+
+                $TL->addRow([$key,$value]);
+            }
+
+            $TL->showTable();
+
+        }
+
+        return ['success' => true];
+    }
+}
+/*function appManagerAutoloader($class) {
+	$class = str_replace(__NAMESPACE__ . '\\', '', $class);
+	$filepath = sprintf('classes/%s.class.php',$class);
+	echo "looking for: $filepath " . PHP_EOL;
+	if (file_exists($filepath)) include($filepath);
+}
+
+spl_autoload_register(__NAMESPACE__ . '\appManagerAutoloader');
+
+$appAppManager = new AppManager();
+$appAppManager->addHook('cli-load-grammar','loadAppManager',90);
+$appAppManager->addHook('cli-init','declareMySelf');
+$appAppManager->addHook('cli-command','processCommand');
+
+array_push($this->apps,$appAppManager);*/
