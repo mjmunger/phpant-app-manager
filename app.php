@@ -695,12 +695,17 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $privateKey = $args['AE']->Configs->getConfigs(['signing-key'])['signing-key'];
 
             if(!file_exists($privateKey)) {
-                print "Private key ($privateKey) is missing or inaccessible. Cannot sign app." . PHP_EOL;
+                print "Private key ($privateKey) is missing or inaccessible. Cannot sign app. Import your key, or generate a new one with 'apps key generate'" . PHP_EOL;
                 return ['success' => false];
             }
 
             //Figure out the on-disk app name
             $requestedApp = $cmd->leftStrip('apps publish', true);
+
+            if(!isset($AE->availableApps[$requestedApp])) {
+                print "Could not find app: $requestedApp. Probably, you typed the name of the app incorrectly. Check spelling and try again." . PHP_EOL;
+                return ['success' => false];
+            }
 
             $buffer = explode('/',dirname($AE->availableApps[$requestedApp]));
             $appFolder = end($buffer);
@@ -711,6 +716,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $options['AE'] = $args['AE'];
 
             $Signer = new \PHPAnt\Core\PHPAntSigner($options);
+
             $Signer->setApp($appFolder);
             $results = $Signer->publish($args);
             
