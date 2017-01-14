@@ -23,7 +23,7 @@
                 if(is_readable($dependency)) {
 
                     //Print debug info if verbosity is greater than 9
-                    if($this->verbosity > 9) print "Including: " . $dependency . PHP_EOL;
+                    if($this->verbosity > 11) print "Including: " . $dependency . PHP_EOL;
 
                     //Include the file!
                     include($dependency);

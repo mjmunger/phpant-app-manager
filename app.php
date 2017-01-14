@@ -18,7 +18,7 @@ namespace PHPAnt\Core;
  * @subpackage   Apps
  * @category     Bootstrap manager
  * @author       Michael Munger <michael@highpoweredhelp.com>
- */ 
+ */
 class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterface  {
 
     /**
@@ -49,10 +49,10 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         }
 
         //Sort the list so we can display it nicely.
-        ksort($actionList);        
+        ksort($actionList);
 
-        return $actionList;        
-    }    
+        return $actionList;
+    }
 
     /**
      * Callback for the cli-load-grammar action, which adds commands specific to this plugin to the CLI grammar.
@@ -62,13 +62,13 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
      * $appAppManager->addHook('cli-load-grammar','loadAppManager');
      * </code>
      *
-     * @return array An array of CLI grammar that will be merged with the rest of the grammar. 
+     * @return array An array of CLI grammar that will be merged with the rest of the grammar.
      * @author Michael Munger <michael@highpoweredhelp.com>
      **/
 
     function loadAppManager($args) {
         $AE = $args['AE'];
-        
+
         $appList = array();
 
         foreach($AE->availableApps as $name => $path) {
@@ -87,6 +87,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                                             , 'show'    => NULL
                                             , 'unban'   => NULL
                                             ]
+                           , 'codepath'  => [ 'analyze' => NULL ]
                            , 'disable'   => $appList
                            , 'enable'    => $appList
                            , 'key'       => [ 'generate' => NULL
@@ -110,16 +111,16 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         $grammar['libs']    = ['git' => NULL];
 
-        $grammar['actions'] = ['show' => [ 'all'        => NULL 
+        $grammar['actions'] = ['show' => [ 'all'        => NULL
                                          , 'priorities' => $actionList
                                          ]
                               ];
-        
+
         $results['grammar'] = $grammar;
         $results['success'] = true;
         return $results;
     }
-    
+
     /**
      * Callback function that prints to the CLI during cli-init to show this plugin has loaded.
      * Example:
@@ -148,7 +149,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 $listingArray = array_diff($AE->availableApps,$AE->enabledApps);
                 print "Available apps" . PHP_EOL;
                 break;
-            
+
             case 'enabled':
                 print "Enabled apps" . PHP_EOL;
                 $listingArray = $AE->enabledApps;
@@ -238,7 +239,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
             print str_pad($plugin->appName, 50);
             print str_pad($plugin->hooks[$hash]['priority'], 50);
-            print PHP_EOL;                
+            print PHP_EOL;
         }
     }
 
@@ -284,7 +285,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 $buffer = explode('/',dirname($requestedApp));
                 $appFolder = end($buffer);
                 return $appFolder;
-                break;            
+                break;
             default:
                 // code...
                 break;
@@ -328,7 +329,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         //We are only supporting git for now.
         printf("Enter the git URL for this project:\n");
-        
+
         //this really needs to be sanitized, but if you're an admin and you
         //want to inject malcious code here, go for it. You're only destroying
         //your own system. We are not going to try to protect you from
@@ -359,7 +360,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         $appDir = $AE->Configs->getAppsDir() . $gitProjectName;
 
-        chdir($appsDir);
+        chdir($appDir);
 
         //Add in the autoloader FIRST before we do a find / replace on the other template fields so they will be included!
 
@@ -443,7 +444,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $TL->addRow([$key,$value]);
         }
 
-        $TL->showTable();        
+        $TL->showTable();
 
         //Now, let's tell git about it.
         chdir($appDir);
@@ -458,7 +459,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             mkdir('classes');
             $fh = fopen($appDir . '/classes/readme.md','w');
             fwrite($fh,'Autoloaded classes go in this directory');
-            fclose($fh);            
+            fclose($fh);
         }
 
         $commands = [ sprintf('git config user.email %s',$authoreamil)
@@ -471,7 +472,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         foreach($commands as $command) {
             passthru($command);
         }
-        
+
         echo "App skeleton created, committed to git, and pushed to the repo. Remember to";
         echo PHP_EOL;
         echo "regenerate your manifest file when you add new hooks, and to re-sign your app";
@@ -498,12 +499,16 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         if($cmd->is('actions show all')) {
             $this->showAllActions($AE,$cmd);
-        }        
+        }
 
         /* git for libraries */
 
         if($cmd->startswith('libs git')) {
             $this->gitLibraries($args);
+        }
+
+        if($cmd->startsWith('apps codepath analyze')) {
+            $AE->showRoutedCodePath($cmd->leftStrip('apps codepath analyze'));
         }
 
         if($cmd->startswith('apps blacklist')) {
@@ -520,7 +525,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                     $AE->Configs->setConfig('BlacklistDisabled',"0");
                     $success = true;
                     $message = "Blacklist enabled." . PHP_EOL;
-                    break;                    
+                    break;
                 case 'clear':
                     $AE->AppBlacklist->clear();
                     $message = "Blacklist cleared." . PHP_EOL;
@@ -582,7 +587,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                         print "The file $path does not exist. Key not set!" . PHP_EOL;
                         return ['success' => false];
                     }
-                    
+
                     $result = $args['AE']->Configs->setConfig('signing-key',$path);
                     $keyPath = $args['AE']->Configs->getConfigs(['signing-key']);
                     print "Signing key set to: " . $keyPath['signing-key'] . PHP_EOL;
@@ -626,7 +631,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             return ['success' => true];
         }
 
-        /* list apps */ 
+        /* list apps */
         if($cmd->startswith('apps list')) {
             $which = $cmd->getLastToken();
             $this->listapps($AE,$which);
@@ -674,7 +679,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
             } else {
                 $result = $this->verifySingleApp($AE,$requestedApp, 'byName');
-                
+
                 if($result['integrityOK']) {
                     print "App integrity OK." . PHP_EOL;
                 } else {
@@ -719,7 +724,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
             $Signer->setApp($appFolder);
             $results = $Signer->publish($args);
-            
+
             $TL = new TableLog();
             $TL->setHeader(["Task","Result"]);
             foreach($results as $key => $value) {
