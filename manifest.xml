@@ -1,27 +1,35 @@
 <?xml version="1.0"?>
 <app name="AppManager" namespace="PHPAnt\Core">
   <file>
-    <name>/home/timing/www/includes/apps/phpant-app-manager/tests</name>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/resources</name>
     <hash>da39a3ee5e6b4b0d3255bfef95601890afd80709</hash>
   </file>
   <file>
-    <name>/home/timing/www/includes/apps/phpant-app-manager/test.php</name>
-    <hash>543f7e84713634ca8d7e88ad3b41eb41f9f6c7ba</hash>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/.git</name>
+    <hash>da39a3ee5e6b4b0d3255bfef95601890afd80709</hash>
   </file>
   <file>
-    <name>/home/timing/www/includes/apps/phpant-app-manager/app.php</name>
-    <hash>9f18900721bbb833b048d088876307fca6983885</hash>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/git-snapshot.json</name>
+    <hash>c1bcffe630c3d898ab24d3447383969e3a9b4112</hash>
   </file>
   <file>
     <name>/home/timing/www/includes/apps/phpant-app-manager/public.key</name>
     <hash>801656e08c261a417314299d8a1603e899f4bfe5</hash>
   </file>
   <file>
-    <name>/home/timing/www/includes/apps/phpant-app-manager/classes</name>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/tests</name>
     <hash>da39a3ee5e6b4b0d3255bfef95601890afd80709</hash>
   </file>
   <file>
-    <name>/home/timing/www/includes/apps/phpant-app-manager/resources</name>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/app.php</name>
+    <hash>ebdfc948f8111e53d524ea949acd8175e95cb055</hash>
+  </file>
+  <file>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/test.php</name>
+    <hash>543f7e84713634ca8d7e88ad3b41eb41f9f6c7ba</hash>
+  </file>
+  <file>
+    <name>/home/timing/www/includes/apps/phpant-app-manager/classes</name>
     <hash>da39a3ee5e6b4b0d3255bfef95601890afd80709</hash>
   </file>
   <action>
@@ -41,5 +49,11 @@
     <function>processCommand</function>
     <priority>50</priority>
     <signature>d44f7e3739770a1c297d1468100728eebf94a8da</signature>
+  </action>
+  <action>
+    <hook>load_loaders</hook>
+    <function>AppManagerAutoLoader</function>
+    <priority>50</priority>
+    <signature>a9c789d8c71a869d2bc224d84c9c1a8c287687bc</signature>
   </action>
 </app>

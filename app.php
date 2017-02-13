@@ -5,9 +5,10 @@ namespace PHPAnt\Core;
  * App Name: +Core App Manager
  * App Description: Provides App management from the CLI to bootstrap your application.
  * App Version: 1.0
- * App Action: cli-load-grammar -> loadAppManager @ 90
- * App Action: cli-init         -> declareMySelf  @ 50
- * App Action: cli-command      -> processCommand @ 50
+ * App Action: cli-load-grammar -> loadAppManager       @ 90
+ * App Action: cli-init         -> declareMySelf        @ 50
+ * App Action: cli-command      -> processCommand       @ 50
+ * App Action: load_loaders     -> AppManagerAutoLoader @ 50
  */
 
  /**
@@ -18,7 +19,7 @@ namespace PHPAnt\Core;
  * @subpackage   Apps
  * @category     Bootstrap manager
  * @author       Michael Munger <michael@highpoweredhelp.com>
- */
+ */ 
 class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterface  {
 
     /**
@@ -39,6 +40,48 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $this->path = __DIR__;
     }
 
+    //Uncomment this function and the following function to enable the autoloader for this plugin.
+    function AppManagerAutoLoader() {
+        //REGISTER THE AUTOLOADER! This has to be done first thing! 
+        spl_autoload_register(array($this,'loadAppManagerClasses'));
+        return ['success' => true];
+
+    }
+
+    public function loadAppManagerClasses($class) {
+
+        //Deal with namespaces
+        if(stripos($class, '\\')) {
+            $buffer = explode('\\', $class);
+            $class = end($buffer);
+        }
+        
+        $baseDir = $this->path;
+
+        $candidate_files = array();
+
+        //Try to grab it from the classes directory.
+        $candidate_path = sprintf($baseDir.'/classes/%s.class.php',$class);
+        array_push($candidate_files, $candidate_path);
+
+        //Loop through all candidate files, and attempt to load them all in the correct order (FIFO)
+        foreach($candidate_files as $dependency) {
+            if($this->verbosity > 14) printf("Looking to load %s",$dependency) . PHP_EOL;
+
+            if(file_exists($dependency)) {
+                if(is_readable($dependency)) {
+
+                    //Print debug info if verbosity is greater than 9
+                    if($this->verbosity > 9) print "Including: " . $dependency . PHP_EOL;
+
+                    //Include the file!
+                    include($dependency);
+                }
+            }
+        }
+        return ['success' => true];
+    }
+
     function getActionList($Engine) {
         $actionList = array();
 
@@ -49,10 +92,10 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         }
 
         //Sort the list so we can display it nicely.
-        ksort($actionList);
+        ksort($actionList);        
 
-        return $actionList;
-    }
+        return $actionList;        
+    }    
 
     /**
      * Callback for the cli-load-grammar action, which adds commands specific to this plugin to the CLI grammar.
@@ -62,13 +105,13 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
      * $appAppManager->addHook('cli-load-grammar','loadAppManager');
      * </code>
      *
-     * @return array An array of CLI grammar that will be merged with the rest of the grammar.
+     * @return array An array of CLI grammar that will be merged with the rest of the grammar. 
      * @author Michael Munger <michael@highpoweredhelp.com>
      **/
 
     function loadAppManager($args) {
         $AE = $args['AE'];
-
+        
         $appList = array();
 
         foreach($AE->availableApps as $name => $path) {
@@ -87,13 +130,16 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                                             , 'show'    => NULL
                                             , 'unban'   => NULL
                                             ]
-                           , 'codepath'  => [ 'analyze' => NULL ]
                            , 'disable'   => $appList
                            , 'enable'    => $appList
-                           , 'key'       => [ 'generate' => NULL
-                                            , 'remove'   => NULL
-                                            , 'set'      => NULL
-                                            , 'show'     => NULL
+                           , 'git'       => [ 'autocommit' => $appList
+                                            , 'export'     => [ 'snapshot' => [ 'relaxed' => NULL] ] 
+                                            , 'import'     => [ 'snapshot' => NULL ] 
+                                            , 'status'     => $appList 
+                                            ]
+                           , 'key'       => [ 'remove' => NULL
+                                            , 'set'    => NULL
+                                            , 'show'   => NULL
                                             ]
                            , 'list'      => [ 'available' => NULL
                                             , 'enabled'   => NULL
@@ -111,16 +157,16 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         $grammar['libs']    = ['git' => NULL];
 
-        $grammar['actions'] = ['show' => [ 'all'        => NULL
+        $grammar['actions'] = ['show' => [ 'all'        => NULL 
                                          , 'priorities' => $actionList
                                          ]
                               ];
-
+        
         $results['grammar'] = $grammar;
         $results['success'] = true;
         return $results;
     }
-
+    
     /**
      * Callback function that prints to the CLI during cli-init to show this plugin has loaded.
      * Example:
@@ -149,7 +195,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 $listingArray = array_diff($AE->availableApps,$AE->enabledApps);
                 print "Available apps" . PHP_EOL;
                 break;
-
+            
             case 'enabled':
                 print "Enabled apps" . PHP_EOL;
                 $listingArray = $AE->enabledApps;
@@ -239,7 +285,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
             print str_pad($plugin->appName, 50);
             print str_pad($plugin->hooks[$hash]['priority'], 50);
-            print PHP_EOL;
+            print PHP_EOL;                
         }
     }
 
@@ -261,8 +307,8 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $path = dirname($AE->availableApps[$appName]);
         $buffer = explode('/', $path);
         $appDir = end($buffer);
-
         $options['AE'] = $AE;
+
         $Signer  = new PHPAntSigner($options);
         $Signer->setApp($appDir);
         $manifestPath = $Signer->generateManifestFile();
@@ -285,7 +331,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 $buffer = explode('/',dirname($requestedApp));
                 $appFolder = end($buffer);
                 return $appFolder;
-                break;
+                break;            
             default:
                 // code...
                 break;
@@ -329,7 +375,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         //We are only supporting git for now.
         printf("Enter the git URL for this project:\n");
-
+        
         //this really needs to be sanitized, but if you're an admin and you
         //want to inject malcious code here, go for it. You're only destroying
         //your own system. We are not going to try to protect you from
@@ -360,7 +406,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         $appDir = $AE->Configs->getAppsDir() . $gitProjectName;
 
-        chdir($appDir);
+        chdir($appsDir);
 
         //Add in the autoloader FIRST before we do a find / replace on the other template fields so they will be included!
 
@@ -444,7 +490,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $TL->addRow([$key,$value]);
         }
 
-        $TL->showTable();
+        $TL->showTable();        
 
         //Now, let's tell git about it.
         chdir($appDir);
@@ -459,7 +505,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             mkdir('classes');
             $fh = fopen($appDir . '/classes/readme.md','w');
             fwrite($fh,'Autoloaded classes go in this directory');
-            fclose($fh);
+            fclose($fh);            
         }
 
         $commands = [ sprintf('git config user.email %s',$authoreamil)
@@ -472,7 +518,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         foreach($commands as $command) {
             passthru($command);
         }
-
+        
         echo "App skeleton created, committed to git, and pushed to the repo. Remember to";
         echo PHP_EOL;
         echo "regenerate your manifest file when you add new hooks, and to re-sign your app";
@@ -481,15 +527,306 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         echo PHP_EOL;
     }
 
+    function showGitStatus($args) {
+        $AE  = $args['AE'];
+        $counter = 0;
+        $TL = new TableLog();
+        $TL->setHeader(['#','Name','Path', 'Status', 'Hash']);
+        $counter = 0;
+        foreach($AE->availableApps as $name => $path) {
+            $counter++;
+            $appDir = dirname($path);
+            chdir($appDir);
+
+            $GitParser = new GitParser();
+
+            $cmd = "git status";
+            $status = shell_exec($cmd);
+            $state = $GitParser->analyzeStatus($status);
+
+            $cmd = 'git rev-parse --short HEAD';
+            $hash = trim(shell_exec($cmd));
+
+            $TL->addRow([$counter,$name,$path,$state,$hash]);
+        }
+
+        $TL->showTable();
+    }
+
+    function showAppGitStatus($args,$appName) {
+        $AE  = $args['AE'];
+        foreach($AE->availableApps as $name => $path) {
+            if($name == $appName) {
+                $GitParser         = new GitParser();
+                $GitParser->appDir = $appDir;
+                echo $GitParser->getGitStatus();
+            }
+        }
+    }
+
+    function autocommit($args,$appName) {
+        $AE  = $args['AE'];
+        foreach($AE->availableApps as $name => $path) {
+            if($name == $appName) {
+                $path = dirname($path);
+                chdir($path);
+                
+                echo "Performing autocommit for $name ($path)..." . PHP_EOL;
+
+                $cmd = 'git commit -a -m"Autocommit via PHP-Ant App Manager"';
+                $result = shell_exec($cmd);
+                echo $result;
+
+                //Try to push it if the word "pull" does not appear in the result.
+                if(stripos($result, "pull")) return false;
+
+                echo "Attempting to git push..." . PHP_EOL;
+                $cmd = 'git push';
+                $result = shell_exec($cmd);
+                echo $result;
+            }
+        }
+    }
+
+    function perfectExportStatus($AE) {
+        $OK = true;
+
+        foreach($AE->availableApps as $name => $path) {
+            $counter++;
+            $appDir = dirname($path);
+            chdir($appDir);
+
+            $GitParser = new GitParser();
+
+            $cmd = "git status";
+            $status = shell_exec($cmd);
+            $state = $GitParser->analyzeStatus($status);
+
+            if($state != 'up-to-date') {
+                $OK = false;
+                break;
+            }
+        }            
+        return $OK;
+    }
+
+    function findAppByRemote($args,$remote) {
+        $buffer   = explode('/', $remote);
+        $repoName = end($buffer);
+        $buffer   = explode('.', $repoName);
+        $appDirName = $buffer[0];
+
+        $AE = $args['AE'];
+
+        $appPath = $AE->Configs->getAppsDir() . $appDirName;
+
+        if(!file_exists($appPath)) return false;
+
+        //Don't delete myself!
+        if($appPath == __DIR__ ) return false;
+
+        $GitParser = new GitParser();
+        $GitParser->appDir = $appPath;
+        $GitParser->getGitHash();
+        $GitParser->parseOrigin();
+        $GitParser->getGitStatus();
+
+        if($GitParser->remotes['fetch'] == $remote) {
+            print "Found: $remote. Proceding with update!" . PHP_EOL;
+            return dirname($path);
+        } else {
+            print "Remote does not agree with snapshot. Removing this app so it can be re-cloned." . PHP_EOL;
+            //remove this directory so we can re-clone it.
+            print "Remote does not match directory. Removing this app so it can be recloned: $appPath" . PHP_EOL;
+            $this->rrmdir($appPath);
+        }
+
+        //did not find the app!
+        print "Could not find $remote" . PHP_EOL;
+        return false;
+    }
+
+    function rrmdir($dir) { 
+        print "Recursively deleting: $dir" . PHP_EOL;
+       if (is_dir($dir)) { 
+         $objects = scandir($dir); 
+         foreach ($objects as $object) { 
+           if ($object != "." && $object != "..") { 
+             if (is_dir($dir."/".$object))
+               $this->rrmdir($dir."/".$object);
+             else
+               unlink($dir."/".$object); 
+           } 
+         }
+         rmdir($dir); 
+       } 
+     }
+
+    function importGitSnapshot($args,$cmd) {
+
+        $snapshotPath = __DIR__ . '/git-snapshot.json';
+
+        if(!file_exists($snapshotPath)) {
+            print "File does not exist: $snapshotPath." . PHP_EOL;
+            print "Create this file by running:"  . PHP_EOL;
+            print PHP_EOL;
+            print PHP_EOL;
+            print "  git apps export snapshot"  . PHP_EOL;
+            print PHP_EOL;
+            print PHP_EOL;
+            print "...and then copy it to the PHP-Ant App Manager app directory."  . PHP_EOL;
+            return false;
+        }
+
+        $buffer = file_get_contents($snapshotPath);
+        $json = json_decode($buffer);
+
+        foreach($json as $node) {
+            $fetch = $node->remotes->fetch;
+            $appPath = $this->findAppByRemote($args,$fetch);
+
+
+            if($appPath === false) {
+                //We need to checkout this app.
+                chdir($args['AE']->Configs->getAppsDir());
+                $cmd = "git clone $fetch";
+                $result = shell_exec($cmd);
+                echo $result . PHP_EOL;
+                //Try again.
+                $appPath = $this->findAppByRemote($args,$fetch);
+            }
+
+            if($appPath === false) {
+                //Tried twice. Something went wrong.
+                print "Could not checkout $fetch to revision $node->hash. Something went wrong. Please correcct any errors and try again." . PHP_EOL;
+                return false;
+            }
+
+            chdir($appPath);
+            $cmd = "git clean -f";
+            $result = shell_exec($cmd);
+            echo $result;
+
+            $cmd = 'git pull';
+            $result = shell_exec($cmd);
+            echo $result . PHP_EOL;
+            
+/*            $Directory = new \RecursiveDirectoryIterator($appPath,\FilesystemIterator::SKIP_DOTS);
+            $Iterator = new \RecursiveIteratorIterator($Directory);
+
+            foreach($Iterator as $file) {
+                //Don't look at anything in the .git directory.
+                if(stripos($file->getPathname(),'.git') !== FALSE ) continue;
+
+                //echo "Checking: $file" . PHP_EOL;
+
+                $cmd = "git checkout $file";
+                //$result = shell_exec($cmd);
+                //echo $result . PHP_EOL;
+            }*/
+            
+            
+            $cmd = "git checkout $node->hash";
+            $result = shell_exec($cmd);
+            echo $result . PHP_EOL;
+        }
+    }
+
+    function exportGitSnapshot($args,$cmd) {
+        $AE = $args['AE'];
+
+        $strict = ($cmd->getLastToken() == 'relaxed' ? false : true);
+
+        if($strict && !$this->perfectExportStatus($AE)) {
+            print "All your apps must be in the 'up-to-date' status before you can created a snapshot export. This means all changes are either stashed or committed, and they have been pushed upstream so the resulting hash is available on other systems via git pull. Run 'apps git status' to see the current status of all yours apps. If you tried to do this on purpose, and do not want a full export, you can use the command 'git apps export snapshot relaxed' to export ONLY the apps that are 'up-to-date'";
+            return true;
+        }
+
+        $export = [];
+
+        foreach($AE->availableApps as $name => $path) {
+            $appDir = dirname($path);
+            $GitParser = new GitParser();
+            $GitParser->appDir = $appDir;
+            $GitParser->getGitHash();
+            $GitParser->parseOrigin();
+            $GitParser->getGitStatus();
+
+            if($GitParser->analyzeStatus($GitParser->fullStatus) != 'up-to-date') continue;
+
+            $node = [];
+            $node['remotes'] = $GitParser->remotes;
+            $node['hash'] = $GitParser->hash;
+
+            array_push($export, $node);
+        }
+
+        $fh = fopen('git-snapshot.json','w');
+        fwrite($fh,json_encode($export));
+        fclose($fh);
+
+        print PHP_EOL;
+        print "Apps snapshot written to ./includes/apps/phpant-app-manager/git-snapshot.json.";
+        print "You can use this to import apps to another installation and ensure they are ";
+        print "checked out to the exact same versions you have here on this server.";
+        print PHP_EOL;
+        print "Simply copy this file to the same location on the target server, then run this command:" ;
+
+        print PHP_EOL;
+        print PHP_EOL;
+        print "apps git import snapshot";
+        print PHP_EOL;
+        print PHP_EOL;
+
+    }
+
     function generatenewKeys($args) {
         $Signer = new \PHPAnt\Core\PHPAntSigner($args);
         $Signer->genKeys(true);
     }
+
     function processCommand($args) {
         $cmd = $args['command'];
         $AE  = $args['AE'];
 
         /* deal with actions */
+
+        if($cmd->startswith('apps git import snapshot')) {
+
+            if(!($cmd->getLastToken() == 'delete-stuff')) {
+
+                print PHP_EOL;
+                print "This is a potentially DESTRUCTIVE action. It will" . PHP_EOL;
+                print "remove unversioned files from the target directory and revert" . PHP_EOL;
+                print "any changes found to existing, versioned files. Before you can" . PHP_EOL;
+                print "execute this, you must confirm that you are willing to lose" . PHP_EOL;
+                print "files that are not in the remote snapshot by appending" . PHP_EOL;
+                print "'delete-stuff' to the end of the command, like so:" . PHP_EOL;
+                print PHP_EOL;
+                print PHP_EOL;
+                print "apps git import snapshot delete-stuff" . PHP_EOL;
+                print PHP_EOL;
+                print PHP_EOL;
+            } else {
+                $this->importGitSnapshot($args,$cmd);
+            }
+        }
+
+        if($cmd->startswith('apps git export snapshot')) {
+            $this->exportGitSnapshot($args,$cmd);
+        }
+
+        if($cmd->startswith('apps git autocommit')) {
+            $this->autocommit($args,$cmd->leftStrip('apps git autocommit', true));
+        }
+
+        if($cmd->startswith('apps git status')) {
+            if($cmd->is('apps git status')) {
+                $this->showGitStatus($args);
+            } else {
+                $this->showAppGitStatus($args,$cmd->leftStrip('apps git status',true));
+            }
+        }
 
         if($cmd->is('apps new')) $this->createNewApp($AE,$cmd);
 
@@ -499,16 +836,12 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         if($cmd->is('actions show all')) {
             $this->showAllActions($AE,$cmd);
-        }
+        }        
 
         /* git for libraries */
 
         if($cmd->startswith('libs git')) {
             $this->gitLibraries($args);
-        }
-
-        if($cmd->startsWith('apps codepath analyze')) {
-            $AE->showRoutedCodePath($cmd->leftStrip('apps codepath analyze'));
         }
 
         if($cmd->startswith('apps blacklist')) {
@@ -525,7 +858,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                     $AE->Configs->setConfig('BlacklistDisabled',"0");
                     $success = true;
                     $message = "Blacklist enabled." . PHP_EOL;
-                    break;
+                    break;                    
                 case 'clear':
                     $AE->AppBlacklist->clear();
                     $message = "Blacklist cleared." . PHP_EOL;
@@ -587,7 +920,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                         print "The file $path does not exist. Key not set!" . PHP_EOL;
                         return ['success' => false];
                     }
-
+                    
                     $result = $args['AE']->Configs->setConfig('signing-key',$path);
                     $keyPath = $args['AE']->Configs->getConfigs(['signing-key']);
                     print "Signing key set to: " . $keyPath['signing-key'] . PHP_EOL;
@@ -631,7 +964,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             return ['success' => true];
         }
 
-        /* list apps */
+        /* list apps */ 
         if($cmd->startswith('apps list')) {
             $which = $cmd->getLastToken();
             $this->listapps($AE,$which);
@@ -679,7 +1012,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
             } else {
                 $result = $this->verifySingleApp($AE,$requestedApp, 'byName');
-
+                
                 if($result['integrityOK']) {
                     print "App integrity OK." . PHP_EOL;
                 } else {
@@ -700,17 +1033,12 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $privateKey = $args['AE']->Configs->getConfigs(['signing-key'])['signing-key'];
 
             if(!file_exists($privateKey)) {
-                print "Private key ($privateKey) is missing or inaccessible. Cannot sign app. Import your key, or generate a new one with 'apps key generate'" . PHP_EOL;
+                print "Private key ($privateKey) is missing or inaccessible. Cannot sign app." . PHP_EOL;
                 return ['success' => false];
             }
 
             //Figure out the on-disk app name
             $requestedApp = $cmd->leftStrip('apps publish', true);
-
-            if(!isset($AE->availableApps[$requestedApp])) {
-                print "Could not find app: $requestedApp. Probably, you typed the name of the app incorrectly. Check spelling and try again." . PHP_EOL;
-                return ['success' => false];
-            }
 
             $buffer = explode('/',dirname($AE->availableApps[$requestedApp]));
             $appFolder = end($buffer);
@@ -721,10 +1049,9 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $options['AE'] = $args['AE'];
 
             $Signer = new \PHPAnt\Core\PHPAntSigner($options);
-
             $Signer->setApp($appFolder);
             $results = $Signer->publish($args);
-
+            
             $TL = new TableLog();
             $TL->setHeader(["Task","Result"]);
             foreach($results as $key => $value) {
@@ -772,18 +1099,3 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         return ['success' => true];
     }
 }
-/*function appManagerAutoloader($class) {
-	$class = str_replace(__NAMESPACE__ . '\\', '', $class);
-	$filepath = sprintf('classes/%s.class.php',$class);
-	echo "looking for: $filepath " . PHP_EOL;
-	if (file_exists($filepath)) include($filepath);
-}
-
-spl_autoload_register(__NAMESPACE__ . '\appManagerAutoloader');
-
-$appAppManager = new AppManager();
-$appAppManager->addHook('cli-load-grammar','loadAppManager',90);
-$appAppManager->addHook('cli-init','declareMySelf');
-$appAppManager->addHook('cli-command','processCommand');
-
-array_push($this->apps,$appAppManager);*/
