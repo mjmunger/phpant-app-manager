@@ -41,10 +41,6 @@ class AppManagerTest extends TestCase
 
         //We have to have at least one app...
         $this->assertGreaterThan(0, count($AE->apps),"App count was zero? Not one loaded app? Seems odd.");
-        $this->assertEquals(1, count($AE->apps));
-
-        $actionList = $AM->getActionList($AE);
-        $this->assertEquals(3,count($actionList),"Seems the App Engine does not have any apps or those apps don't have any hooks?");
     }
 
     /* Testing commands */
@@ -145,7 +141,7 @@ class AppManagerTest extends TestCase
         //var_dump($AE->enabledApps);
 
         $actionList = $AM->getActionList($AE);
-        $this->assertEquals(3,count($actionList),"Seems the App Engine does not have any apps or those apps don't have any hooks?");
+        $this->assertGreaterThan(3,count($actionList),"Seems the App Engine does not have any apps or those apps don't have any hooks?");
 
     }    
 
@@ -169,7 +165,7 @@ class AppManagerTest extends TestCase
         $this->assertEquals(2, count($AE->enabledApps));
         
         $actionList = $AM->getActionList($AE);
-        $this->assertEquals(3,count($actionList),"Seems the App Engine does not have any apps or those apps don't have any hooks?");
+        $this->assertGreaterThan(3,count($actionList),"Seems the App Engine does not have any apps or those apps don't have any hooks?");
         //Make now, we have to enable the default app!
 
         //Now, let's disable the Default Grammar app.
