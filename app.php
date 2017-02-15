@@ -557,6 +557,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $AE  = $args['AE'];
         foreach($AE->availableApps as $name => $path) {
             if($name == $appName) {
+                $appDir = dirname($path);
                 $GitParser         = new GitParser();
                 $GitParser->appDir = $appDir;
                 echo $GitParser->getGitStatus();
