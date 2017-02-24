@@ -130,6 +130,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                                             , 'show'    => NULL
                                             , 'unban'   => NULL
                                             ]
+                           , 'codepath'  => [ 'analyze' => NULL ]
                            , 'disable'   => $appList
                            , 'enable'    => $appList
                            , 'git'       => [ 'autocommit' => $appList
@@ -406,7 +407,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         $appDir = $AE->Configs->getAppsDir() . $gitProjectName;
 
-        chdir($appsDir);
+        chdir($appDir);
 
         //Add in the autoloader FIRST before we do a find / replace on the other template fields so they will be included!
 
@@ -843,6 +844,10 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         if($cmd->startswith('libs git')) {
             $this->gitLibraries($args);
+        }
+        
+        if($cmd->startsWith('apps codepath analyze')) {
+            $AE->showRoutedCodePath($cmd->leftStrip('apps codepath analyze'));
         }
 
         if($cmd->startswith('apps blacklist')) {
