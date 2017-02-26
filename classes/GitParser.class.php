@@ -12,9 +12,10 @@ class GitParser
 
 	function analyzeStatus($status) {
 		$regexes = [ 'branch-ahead'     => '/Your branch is ahead of .* by ([0-9]{0,}) commit[s]{0,1}/'
+		           , 'untracked-files'  => '/Untracked files:/'
 		           , 'unstaged-changes' => '/Changes not staged for commit/'
 		           , 'up-to-date'       => '/Your branch is up-to-date/'
-		           , 'diverged'       => '/Your branch and \'.*\' have diverged/'
+		           , 'diverged'         => '/Your branch and \'.*\' have diverged/'
 		           ];
 
 		foreach($regexes as $stage => $pattern) {
