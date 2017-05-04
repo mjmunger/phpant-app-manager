@@ -1,6 +1,8 @@
 <?php
 namespace PHPAnt\Core;
 
+use \Exception;
+
 /**
  * App Name: +Core App Manager
  * App Description: Provides App management from the CLI to bootstrap your application.
@@ -134,6 +136,8 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                            , 'disable'   => $appList
                            , 'enable'    => $appList
                            , 'git'       => [ 'autocommit' => $appList
+                                            , 'diff'       => NULL
+                                            , 'dump'       => NULL
                                             , 'export'     => [ 'snapshot' => [ 'relaxed' => NULL] ] 
                                             , 'import'     => [ 'snapshot' => NULL ] 
                                             , 'status'     => $appList 
@@ -782,9 +786,111 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
     }
 
+    function getGitDump($args) {
+        $AE = $args['AE'];
+
+        $buffer =  [];
+
+        foreach($AE->availableApps as $name => $path) {
+            $appDir = dirname($path);
+            $GitParser = new GitParser();
+            $GitParser->appDir = $appDir;
+            $GitParser->getGitHash();
+            $GitParser->parseOrigin();
+            $GitParser->getGitStatus();
+
+            $node = [];
+            $node['name'] = $name;
+            $node['path'] = $path;
+            $node['hash'] = $GitParser->hash;
+            $node['remote'] = $GitParser->remotes;
+
+            $buffer[$path] = $node;
+        }
+
+        return json_encode($buffer);
+    }
+
+    function packageApp($remoteApp) {
+        $buffer = [];
+        $buffer['app']    = $remoteApp->path;
+        $buffer['remote'] = $remoteApp->remote;
+        $buffer['hash']   = $remoteApp->hash;
+        return $buffer;
+    }
+
+    function getGitDiff($args, $remoteJsonDump) {
+
+        //Organize the two dump files.
+        $remoteDump = json_decode($remoteJsonDump);
+        $myDump = json_decode($this->getGitDump($args));
+
+        $results = [];
+        $results['missing'] = []; //Holds apps the remote has installed, that we do not.
+        $results['hash']    = []; //Holds apps where they exist in both places, but the hash is different.
+        $results['extra']   = []; //Holds apps we have that the remote does not.
+        //Loop through the remote dump
+        foreach($remoteDump as $remoteApp) {
+
+            //Check to see if that app exists locally
+            $path = $remoteApp->path;
+            $exists = isset($myDump->$path);
+            $buffer = $this->packageApp($remoteApp);
+
+            if($exists) {
+                $localApp = $myDump->$path;
+                //Check the hash
+                $hashSame = (strcmp($localApp->hash, $remoteApp->hash) == 0);
+
+                if($hashSame) continue; //Exists in both places, and hash is the same. We're no longer interested in it.
+
+
+                //Exists in both places, but there is a hash mismatch. Add to the hash element.
+                array_push($results['hash'], $buffer);
+                continue;
+            }
+
+            //Doesn't exist, so add to missing
+            array_push($results['missing'], $buffer);
+        }
+
+        //figure out what we have that they don't.
+
+        foreach($myDump as $localApp) {
+
+            $path = $localApp->path;
+            $exists = isset($remoteDump->$path);
+            $buffer = $this->packageApp($localApp);
+
+            // printf("[ %s ] $path" . PHP_EOL,($exists ? "OK" : "EXTRA"), $path);
+
+            if($exists) continue;
+
+            array_push($results['extra'], $buffer);
+        }
+
+        $return = json_encode($results);
+        return $return;
+    }
+
     function generatenewKeys($args) {
         $Signer = new \PHPAnt\Core\PHPAntSigner($args);
         $Signer->genKeys(true);
+    }
+
+    function printDiffTable($appListObject, $title) {
+        echo str_repeat("=", 20) . PHP_EOL;
+        print strtoupper($title) . PHP_EOL;
+        echo str_repeat("=", 20) . PHP_EOL;
+
+        $TL = new TableLog();
+        $TL->setHeader(['App','Hash','Remote']);
+
+        foreach($appListObject as $App) {
+            $TL->addRow([$App->app, $App->hash, $App->remote]);
+        }
+
+        return $TL->makeTable();
     }
 
     function processCommand($args) {
@@ -812,6 +918,41 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             } else {
                 $this->importGitSnapshot($args,$cmd);
             }
+        }
+
+        if($cmd->startswith('apps git dump')) {
+            $outfile = $cmd->getLastToken();
+            $outpath = dirname($outfile);
+
+            if(!file_exists($outpath)) mkdir($outpath, 0777, true);
+
+            $json = $this->getGitDump($args);
+
+            $fh = fopen($outfile,'w');
+            fwrite($fh,$json);
+            fclose($fh);
+
+            echo "Git status dumpped to: $outfile" . PHP_EOL;
+            echo "";
+
+        }
+
+        if($cmd->startswith('apps git diff')) {
+            $infile = $cmd->getLastToken();
+            if(!file_exists($infile)) {
+                echo "Cannot find file: $infile" . PHP_EOL;
+                return ['success' => false];
+            }
+
+            $remoteJsonDump = trim(file_get_contents($infile));
+            $resultObject = json_decode($this->getGitDiff($args, $remoteJsonDump));
+
+            if(count($resultObject->missing) > 0 ) echo $this->printDiffTable($resultObject->missing , 'missing' );
+            if(count($resultObject->hash)    > 0 ) echo $this->printDiffTable($resultObject->hash    , 'hash'    );
+            if(count($resultObject->extra)   > 0 ) echo $this->printDiffTable($resultObject->extra   , 'extra'   );
+
+            if(count($resultObject->missing) + count($resultObject->hash) + count($resultObject->extra) == 0) echo "Good news! Remote system is identical to this system." . PHP_EOL;
+
         }
 
         if($cmd->startswith('apps git export snapshot')) {

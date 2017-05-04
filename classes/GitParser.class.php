@@ -46,14 +46,15 @@ class GitParser
 		$cmd = 'git remote -v';
 		$response = trim(shell_exec($cmd));
 		$buffer = explode("\n", $response);
-
 		$remote = [];
 
-		$pattern = '/(git\@.*\.git) \((fetch|push)\)/';
-		foreach($buffer as $line) {
+		// $pattern = '/(git\@.*\.git) \((fetch|push)\)/';
+        $pattern = '%((https://)|(git@)).*.git%';
+        foreach($buffer as $line) {
 			$matches = [];
 			$result = preg_match($pattern, $line,$matches);
-			$remote[$matches[2]] = $matches[1];
+            // $remote[$matches[2]] = $matches[0];
+			$remote = $matches[0];
 		}
 
 		$this->remotes = $remote;
