@@ -637,14 +637,14 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $GitParser->parseOrigin();
         $GitParser->getGitStatus();
 
-        if($GitParser->remotes['fetch'] == $remote) {
+        if($GitParser->remotes == $remote) {
             print "Found: $remote. Proceding with update!" . PHP_EOL;
             return dirname($path);
         } else {
             print "Remote does not agree with snapshot. Removing this app so it can be re-cloned." . PHP_EOL;
             //remove this directory so we can re-clone it.
             print "Remote does not match directory. Removing this app so it can be recloned: $appPath" . PHP_EOL;
-            $this->rrmdir($appPath);
+            //$this->rrmdir($appPath);
         }
 
         //did not find the app!
