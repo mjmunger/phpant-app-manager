@@ -914,7 +914,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         echo str_repeat("=", 20) . PHP_EOL;
 
         $TL = new TableLog();
-        $TL->setHeader(['App','Hash','Remote']);
+        $TL->setHeader(['App','Remote Hash','Repo']);
 
         foreach($appListObject as $App) {
             $TL->addRow([$App->app, $App->hash, $App->remote]);
