@@ -772,20 +772,24 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             array_push($export, $node);
         }
 
-        $fh = fopen('git-snapshot.json','w');
+        $jsonPath = __DIR__ . '/git-snapshot.json';
+        $fh = fopen($jsonPath,'w');
         fwrite($fh,json_encode($export));
         fclose($fh);
 
         print PHP_EOL;
-        print "Apps snapshot written to ./includes/apps/phpant-app-manager/git-snapshot.json.";
-        print "You can use this to import apps to another installation and ensure they are ";
-        print "checked out to the exact same versions you have here on this server.";
-        print PHP_EOL;
-        print "Simply copy this file to the same location on the target server, then run this command:" ;
-
+        print "Apps snapshot written to:";
         print PHP_EOL;
         print PHP_EOL;
-        print "apps git import snapshot";
+        print "  $jsonPath.";
+        print PHP_EOL;
+        print PHP_EOL;
+        print "You can use this to import apps to another installation and ensure they are " . PHP_EOL;
+        print "checked out to the exact same versions you have here on this server." . PHP_EOL;
+        print PHP_EOL;
+        print "Simply copy this file to the same location on the target server, then run this command:" . PHP_EOL;
+        print PHP_EOL;
+        print "  apps git import snapshot";
         print PHP_EOL;
         print PHP_EOL;
 
