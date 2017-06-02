@@ -709,9 +709,14 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             }
 
             chdir($appPath);
+
             $cmd = "git clean -f";
             $result = shell_exec($cmd);
-            echo $result;
+            echo $result . PHP_EOL;
+
+            $cmd = "git reset --hard HEAD";
+            $result = shell_exec($cmd);
+            echo $result . PHP_EOL;
 
             $cmd = 'git pull';
             $result = shell_exec($cmd);
@@ -904,7 +909,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             if(!($cmd->getLastToken() == 'delete-stuff')) {
 
                 print PHP_EOL;
-                print "This is a potentially DESTRUCTIVE action. It will" . PHP_EOL;
+                print "This is a DESTRUCTIVE action. It will" . PHP_EOL;
                 print "remove unversioned files from the target directory and revert" . PHP_EOL;
                 print "any changes found to existing, versioned files. Before you can" . PHP_EOL;
                 print "execute this, you must confirm that you are willing to lose" . PHP_EOL;
@@ -913,6 +918,9 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 print PHP_EOL;
                 print PHP_EOL;
                 print "apps git import snapshot delete-stuff" . PHP_EOL;
+                print PHP_EOL;
+                print "You may consider 'git stash' as a way to save those changes or" . PHP_EOL;
+                print "make a backup first, which is the better idea." . PHP_EOL;
                 print PHP_EOL;
                 print PHP_EOL;
             } else {
