@@ -617,6 +617,8 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
     }
 
     function findAppByRemote($args,$remote) {
+        echo "<pre>"; var_dump($remote); echo "</pre>";
+        die(__FILE__  . ':' . __LINE__ );
         $buffer   = explode('/', $remote);
         $repoName = end($buffer);
         $buffer   = explode('.', $repoName);
@@ -636,6 +638,9 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $GitParser->getGitHash();
         $GitParser->parseOrigin();
         $GitParser->getGitStatus();
+
+        echo "<pre>"; var_dump($GitParser); echo "</pre>";
+        die(__FILE__  . ':' . __LINE__ );
 
         if($GitParser->remotes == $remote) {
             print "Found: $remote. Proceding with update!" . PHP_EOL;
@@ -688,7 +693,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $json = json_decode($buffer);
 
         foreach($json as $node) {
-            $fetch = $node->remotes->fetch;
+            $fetch = $node->remotes;
             $appPath = $this->findAppByRemote($args,$fetch);
 
 
