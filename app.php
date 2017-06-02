@@ -688,7 +688,14 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $json = json_decode($buffer);
 
         foreach($json as $node) {
+
             $fetch = $node->remotes;
+            //Never update the app manager this way.
+            if(strstr($fetch, 'phpant-app-manager.git') !== FALSE) {
+                print "You cannot update the app manager this way. Skipping." . PHP_EOL;
+                continue;
+            }
+
             print "Updating $fetch..." . PHP_EOL;
 
             $appPath = $this->findAppByRemote($args,$fetch);
@@ -725,6 +732,10 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             $cmd = "git reset --hard HEAD";
             $result = shell_exec($cmd);
             // echo $result . PHP_EOL;
+
+            print "Checking out master..." . PHP_EOL;
+            $cmd = 'git checkout master';
+            $result = shell_exec($cmd);
 
             print "Pulling for master..." . PHP_EOL;
             $cmd = 'git pull';
