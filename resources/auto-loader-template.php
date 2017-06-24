@@ -7,6 +7,12 @@
     }
 
     public function load%SYSTEMNAME%Classes($class) {
+        
+        //Break apart namespaced requests.
+
+        $buffer = explode("\\",$class);
+        $class = end($buffer);
+
         $baseDir = $this->path;
 
         $candidate_files = array();

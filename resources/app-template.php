@@ -2,6 +2,12 @@
 
 namespace %PROJECT%\%SUBSPACE%;
 
+use PHPAnt\Core\AntApp
+use PHPAnt\Core\AppInterface
+
+use PHPAnt\Core\CommandInvoker;
+use PHPAnt\Core\CommandList;
+
 /**
  * App Name: %FRIENDLYNAME%
  * App Description: %APPDESCRIPTION%
@@ -22,7 +28,7 @@ namespace %PROJECT%\%SUBSPACE%;
  */ 
 
 
-class %SYSTEMNAME% extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterface  {
+class %SYSTEMNAME% extends AntApp  implements AppInterface  {
 
     /**
      * Instantiates an instance of the %SYSTEMNAME% class.
@@ -40,6 +46,10 @@ class %SYSTEMNAME% extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterf
         $this->appName = '%FRIENDLYNAME%';
         $this->canReload = true;
         $this->path = __DIR__;
+
+        //requires to use the CommandList to get grammar... and to avoid crashes.
+        $this->AppCommands = new CommandList();
+        $this->loadCommands();
     }
 
     /**
@@ -54,6 +64,8 @@ class %SYSTEMNAME% extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterf
         $grammar = [];
 
         $this->loaded = true;
+
+        $grammar = array_merge_recursive($grammar, $this->AppCommands->getGrammar());
         
         $results['grammar'] = $grammar;
         $results['success'] = true;
