@@ -7,6 +7,10 @@
     }
 
     public function load%SYSTEMNAME%Classes($class) {
+
+        $buffer = explode("\\", $class);
+        $class = end($buffer);
+        
         $baseDir = $this->path;
 
         $candidate_files = array();

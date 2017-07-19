@@ -637,14 +637,15 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $GitParser->parseOrigin();
         $GitParser->getGitStatus();
 
-        if($GitParser->remotes['fetch'] == $remote) {
+        if($GitParser->remotes == $remote) {
             print "Found: $remote. Proceding with update!" . PHP_EOL;
             return dirname($path);
         } else {
             print "Remote does not agree with snapshot. Removing this app so it can be re-cloned." . PHP_EOL;
             //remove this directory so we can re-clone it.
             print "Remote does not match directory. Removing this app so it can be recloned: $appPath" . PHP_EOL;
-            $this->rrmdir($appPath);
+            // $this->rrmdir($appPath);
+            die(__FILE__  . ':' . __LINE__ );
         }
 
         //did not find the app!
@@ -689,6 +690,8 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
 
         foreach($json as $node) {
             $fetch = $node->remotes->fetch;
+            echo "<pre>"; var_dump($fetch); echo "</pre>";
+            die(__FILE__  . ':' . __LINE__ );
             $appPath = $this->findAppByRemote($args,$fetch);
 
 

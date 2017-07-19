@@ -54,9 +54,10 @@ class GitParser
 			$matches = [];
 			$result = preg_match($pattern, $line,$matches);
             // $remote[$matches[2]] = $matches[0];
-			$remote = $matches[0];
-		}
+		    $this->remotes = $matches[0];
+            return true;
+        }
 
-		$this->remotes = $remote;
+        return false;
 	}
 } 
