@@ -641,7 +641,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             print "Found: $remote. Proceding with update!" . PHP_EOL;
             return dirname($path);
         } else {
-            print "Remote does not agree with snapshot. Removing this app so it can be re-cloned." . PHP_EOL;
+            printf("Remote does not agree with snapshot. (%s != %s) Removing this app so it can be re-cloned." . PHP_EOL,$GitParser->remotes, $remote);
             //remove this directory so we can re-clone it.
             print "Remote does not match directory. Removing this app so it can be recloned: $appPath" . PHP_EOL;
             // $this->rrmdir($appPath);
@@ -689,9 +689,16 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         $json = json_decode($buffer);
 
         foreach($json as $node) {
-            $fetch = $node->remotes->fetch;
-            echo "<pre>"; var_dump($fetch); echo "</pre>";
-            die(__FILE__  . ':' . __LINE__ );
+
+            $fetch = $node->remotes;
+            //Never update the app manager this way.
+            if(strstr($fetch, 'phpant-app-manager.git') !== FALSE) {
+                print "You cannot update the app manager this way. Skipping." . PHP_EOL;
+                continue;
+            }
+
+            print "Updating $fetch..." . PHP_EOL;
+
             $appPath = $this->findAppByRemote($args,$fetch);
 
 
@@ -700,7 +707,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 chdir($args['AE']->Configs->getAppsDir());
                 $cmd = "git clone $fetch";
                 $result = shell_exec($cmd);
-                echo $result . PHP_EOL;
+                // echo $result . PHP_EOL;
                 //Try again.
                 $appPath = $this->findAppByRemote($args,$fetch);
             }
@@ -711,19 +718,30 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 return false;
             }
 
+            print "AppPath = $appPath" . PHP_EOL;
+
             chdir($appPath);
 
+            print "Current directory: " . getcwd() . PHP_EOL;
+
+            print "Cleaning..." . PHP_EOL;
             $cmd = "git clean -f";
             $result = shell_exec($cmd);
-            echo $result . PHP_EOL;
+            // echo $result . PHP_EOL;
 
+            print "Resetting..." . PHP_EOL;
             $cmd = "git reset --hard HEAD";
             $result = shell_exec($cmd);
-            echo $result . PHP_EOL;
+            // echo $result . PHP_EOL;
 
+            print "Checking out master..." . PHP_EOL;
+            $cmd = 'git checkout master';
+            $result = shell_exec($cmd);
+
+            print "Pulling for master..." . PHP_EOL;
             $cmd = 'git pull';
             $result = shell_exec($cmd);
-            echo $result . PHP_EOL;
+            // echo $result . PHP_EOL;
             
 /*            $Directory = new \RecursiveDirectoryIterator($appPath,\FilesystemIterator::SKIP_DOTS);
             $Iterator = new \RecursiveIteratorIterator($Directory);
@@ -740,9 +758,10 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             }*/
             
             
+            print "Checking out: " . $node->hash . PHP_EOL;
             $cmd = "git checkout $node->hash";
             $result = shell_exec($cmd);
-            echo $result . PHP_EOL;
+            //echo $result . PHP_EOL;
         }
     }
 
@@ -896,7 +915,7 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         echo str_repeat("=", 20) . PHP_EOL;
 
         $TL = new TableLog();
-        $TL->setHeader(['App','Hash','Remote']);
+        $TL->setHeader(['App','Remote Hash','Repo']);
 
         foreach($appListObject as $App) {
             $TL->addRow([$App->app, $App->hash, $App->remote]);
