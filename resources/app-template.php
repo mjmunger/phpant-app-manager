@@ -12,9 +12,10 @@ use PHPAnt\Core\CommandList;
  * App Name: %FRIENDLYNAME%
  * App Description: %APPDESCRIPTION%
  * App Version: 1.0
- * App Action: cli-load-grammar -> load%SYSTEMNAME% @ 90
- * App Action: cli-init         -> declareMySelf  @ 50
- * App Action: cli-command      -> processCommand @ 50
+ * App Action: cli-load-grammar  -> load%SYSTEMNAME% @ 90
+ * App Action: cli-init          -> declareMySelf  @ 50
+ * App Action: cli-command       -> processCommand @ 50
+ * App Action: load_loaders      -> load%SYSTEMNAME%Classes @ 50
  */
 
  /**

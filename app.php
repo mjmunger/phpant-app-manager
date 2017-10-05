@@ -659,7 +659,8 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
             printf("Remote does not agree with snapshot. (%s != %s) Removing this app so it can be re-cloned." . PHP_EOL,$GitParser->remotes, $remote);
             //remove this directory so we can re-clone it.
             print "Remote does not match directory. Removing this app so it can be recloned: $appPath" . PHP_EOL;
-            $this->rrmdir($appPath);
+            // $this->rrmdir($appPath);
+            die(__FILE__  . ':' . __LINE__ );
         }
 
         //did not find the app!
