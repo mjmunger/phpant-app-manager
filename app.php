@@ -245,10 +245,25 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         return ['success' => $result];
     }
 
+    function enableAllApps($args) {
+        $Engine = $args['AE'];
+
+        foreach($Engine->availableApps as $name => $path) {
+            printf("Enabling: %s" . PHP_EOL, $name);
+
+            $result = $Engine->enableApp($name,$path);
+        }
+
+        return $result;
+    }
+
     function enableApp($args) {
         $AE      = $args['AE'];
         $command = $args['command'];
         $appName = $command->leftStrip('apps enable',true);
+
+        if($appName == 'all') return $this->enableAllApps($args);
+
         if(!array_key_exists($appName, $AE->availableApps)) {
             echo "$appName could not be found in the list of available apps." . PHP_EOL;
             return ['success' => false];
@@ -923,6 +938,14 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
         return $TL->makeTable();
     }
 
+    function resetApps($Engine) {
+
+        $Engine->Configs->setConfig('enabledAppsList',[]);
+        $Engine->loadApps();
+
+        print "Apps have been reset. Re-enable apps now, and reload as necessary." . PHP_EOL;
+    }
+
     function processCommand($args) {
         $cmd = $args['command'];
         $AE  = $args['AE'];
@@ -1142,6 +1165,10 @@ class AppManager extends \PHPAnt\Core\AntApp implements \PHPAnt\Core\AppInterfac
                 print "I could not restore the enabled apps list. " . PHP_EOL;
             }
             return ['success' => true];
+        }
+
+        if($cmd->startswith('apps reset')) {
+            $this->resetApps($AE);
         }
 
         /* list apps */ 
