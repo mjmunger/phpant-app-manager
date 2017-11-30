@@ -80,11 +80,22 @@ class %SYSTEMNAME% extends AntApp  implements AppInterface  {
 
         This code will cause the CLI command `foo bar` to execute the method $this->doSomeWork:
 
+        //Hard way. Use the easy way below. This is here FYI because older apps used this way.
         $callback = 'doSomeWork';
         $criteria = ['is' => ['foo bar' => true]];
-        $Invoker = new CommandInvoker($callback);
-        $Invoker->addCriteria($criteria);
-        $this->AppCommands->add($Invoker);
+        $Command = new CommandInvoker($callback);
+        $Command->addCriteria($criteria);
+        $this->AppCommands->add($Command);
+        
+        //Easy way
+        $Command = new CommandInvoker('doSomeWork');
+        $Command->is('foo bar');
+        $this->AppCommands->add($Command);
+
+        //Easy way for "starts with"
+        $Command = new CommandInvoker('doSomeWork');
+        $Command->startsWith('foo bar');
+        $this->AppCommands->add($Command);
 
         */
 
