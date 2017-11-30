@@ -12,10 +12,20 @@ use PHPAnt\Core\CommandList;
  * App Name: %FRIENDLYNAME%
  * App Description: %APPDESCRIPTION%
  * App Version: 1.0
- * App Action: cli-load-grammar  -> load%SYSTEMNAME% @ 90
- * App Action: cli-init          -> declareMySelf  @ 50
- * App Action: cli-command       -> processCommand @ 50
+ * App Action: cli-load-grammar  -> load%SYSTEMNAME%       @ 90
+ * App Action: cli-init          -> declareMySelf          @ 50
+ * App Action: cli-command       -> processCommand         @ 50
  * App Action: load_loaders      -> %SYSTEMNAME%AutoLoader @ 50
+ *
+ * Actions may be remarked out by changing the ":" to a "#"
+ * Example remarked action:
+ * App Action# foo-action       -> doSomeWork             @ 50
+ *
+ * CSS and JS injections:
+ * 
+ * App Action: header-inject-css -> injectCSS              @ 50
+ * App Action: footer-inject-js  -> injectFooterJS         @ 50
+ * App Action: header-inject-js  -> injectHeaderJS         @ 50
  */
 
  /**
@@ -75,7 +85,7 @@ class %SYSTEMNAME% extends AntApp  implements AppInterface  {
         $Invoker = new CommandInvoker($callback);
         $Invoker->addCriteria($criteria);
         $this->AppCommands->add($Invoker);
-        
+
         */
 
         $grammar = array_merge_recursive($grammar, $this->AppCommands->getGrammar());

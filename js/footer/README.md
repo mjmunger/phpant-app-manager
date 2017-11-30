@@ -1,0 +1,2 @@
+Files in this directory will be sorted in alphanurmic order, and then injected into the page via the footer-inject-js
+action, which should be placed after the `</body>` tag (this is how it is done in the default and sample themes).

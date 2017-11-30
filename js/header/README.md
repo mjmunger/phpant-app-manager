@@ -1,0 +1,2 @@
+Files in this directory will be sorted in alphanurmic order, and then injected into the page via the header-inject-js
+action, which should be placed in the header (as it is done in the sample and default themes).
