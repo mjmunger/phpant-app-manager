@@ -2,8 +2,8 @@
 
 namespace %PROJECT%\%SUBSPACE%;
 
-use PHPAnt\Core\AntApp
-use PHPAnt\Core\AppInterface
+use PHPAnt\Core\AntApp;
+use PHPAnt\Core\AppInterface;
 
 use PHPAnt\Core\CommandInvoker;
 use PHPAnt\Core\CommandList;
@@ -15,7 +15,7 @@ use PHPAnt\Core\CommandList;
  * App Action: cli-load-grammar  -> load%SYSTEMNAME% @ 90
  * App Action: cli-init          -> declareMySelf  @ 50
  * App Action: cli-command       -> processCommand @ 50
- * App Action: load_loaders      -> load%SYSTEMNAME%Classes @ 50
+ * App Action: load_loaders      -> %SYSTEMNAME%AutoLoader @ 50
  */
 
  /**
@@ -65,6 +65,18 @@ class %SYSTEMNAME% extends AntApp  implements AppInterface  {
         $grammar = [];
 
         $this->loaded = true;
+
+        /* Example command invoker. Use this for adding CLI commands:
+
+        This code will cause the CLI command `foo bar` to execute the method $this->doSomeWork:
+
+        $callback = 'doSomeWork';
+        $criteria = ['is' => ['foo bar' => true]];
+        $Invoker = new CommandInvoker($callback);
+        $Invoker->addCriteria($criteria);
+        $this->AppCommands->add($Invoker);
+        
+        */
 
         $grammar = array_merge_recursive($grammar, $this->AppCommands->getGrammar());
         
